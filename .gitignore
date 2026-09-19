@@ -15,3 +15,5 @@ results/preds/*.h5
 
 # paper/main.pdf and paper/figures/ ARE tracked (compiled deliverable, viewable on GitHub
 # without installing tectonic). Only LaTeX build byproducts above are ignored.
+results/logs/
+results/recommendations_*.csv

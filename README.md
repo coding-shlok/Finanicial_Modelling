@@ -316,7 +316,7 @@ On the PRD test period (78 weeks, net of costs):
 |---|---|---|---|---|
 | **MTL (ours)** | **2.54** | **0.064** | 0.36 | full model |
 | MTL, no graph features | 2.01 | 0.037 | 0.13 | value of the 30 graph features |
-| MTL, return-only (no volatility task) | 1.21 | 0.017 | 0.92 | value of the auxiliary volatility task |
+| MTL, return-only (no volatility task) | 1.20 | 0.017 | 0.92 | value of the auxiliary volatility task |
 | MTL + cost-term (λ=0.3) | 1.64 | 0.031 | 0.69 | value of the differentiable cost penalty (did not help) |
 | Logistic regression (same features) | 2.20 | 0.026 | 0.86 | non-deep baseline on identical inputs |
 
@@ -341,7 +341,7 @@ top-decile portfolio that is actually traded.
   (`results/figures/attention_by_lag_tuned.png` /
   `_prd_default.png`) — an honest negative result about what the tuner found.
 - **SHAP** (GradientExplainer on the decision score, 600 test-period samples):
-  **76% of attribution mass is on graph features**, led by market beta and
+  **75% of attribution mass is on graph features**, led by market beta and
   market correlation — the model learned to buy high-beta, market-sensitive
   names, which explains both why it won the 2023–2024 rally and why it lost
   the flat 2025–2026 market. The top 5 features explain only 27% of

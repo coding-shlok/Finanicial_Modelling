@@ -2,6 +2,8 @@
 name = "nifty-mtl"
 version = "0.1.0"
 description = "Multi-task deep learning with graph features for risk-adjusted stock selection on Nifty 50"
+authors = [{ name = "Shlok Shah", email = "studentplanchahiye@gmail.com" }]
+license = { text = "MIT" }
 requires-python = ">=3.11"
 dependencies = []
 

@@ -1,3 +1,0 @@
-[I 2026-09-19 10:48:08,032] A new study created in RDB with name: mtl_v1
-trial 0: IC 0.0091  valSharpe 2.368  best_ep 7  params {'d_model': 64, 'n_layers': 2, 'dropout': 0.30000000000000004, 'lr': 0.0008996299860535253, 'weight_decay': 2.054762512591135e-05, 'w_return': 0.8, 'lambda_turnover': 0.0, 'target_mode': 'cs_demean'}
-[I 2026-09-19 10:50:23,791] Trial 0 finished with value: 0.009147767126490536 and parameters: {'d_model': 64, 'n_layers': 2, 'dropout': 0.30000000000000004, 'lr': 0.0008996299860535253, 'weight_decay': 2.054762512591135e-05, 'w_return': 0.8, 'lambda_turnover': 0.0, 'target_mode': 'cs_demean'}. Best is trial 0 with value: 0.009147767126490536.

@@ -66,7 +66,7 @@ def stock_characteristic_table(score: pd.DataFrame, rr: pd.DataFrame, fs: Featur
         if m.sum() < 20:
             continue
         ranks = score.rank(axis=1, ascending=False)[s].reindex(idx)
-        n_stocks = score.notna().sum(1).reindex(idx)
+        n_stocks = score.notna().sum(axis=1).reindex(idx)
         buy = (ranks <= np.round(0.1 * n_stocks)) & m
         rows.append({
             "symbol": s, "sector": universe.sector_of[s],

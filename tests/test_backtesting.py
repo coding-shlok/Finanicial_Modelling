@@ -19,8 +19,8 @@ def _mock(n_weeks=30, n=20, seed=0):
 def test_signals_decile_counts():
     scores, _ = _mock()
     sig = signals_from_scores(scores, 0.1, 0.1)
-    assert ((sig == 1).sum(1) == 2).all() and ((sig == -1).sum(1) == 2).all()
-    assert ((sig == 0).sum(1) == 16).all()
+    assert ((sig == 1).sum(axis=1) == 2).all() and ((sig == -1).sum(axis=1) == 2).all()
+    assert ((sig == 0).sum(axis=1) == 16).all()
 
 
 def test_backtest_pnl_calculation():
@@ -60,7 +60,7 @@ def test_max_position_leaves_cash_at_rf():
 def test_long_short_is_dollar_neutral():
     scores, rets = _mock()
     res = run_backtest(scores, rets, BacktestConfig(max_position=1.0), mode="long_short")
-    assert np.allclose(res.weights.sum(1), 0.0)
+    assert np.allclose(res.weights.sum(axis=1), 0.0)
 
 
 def test_metrics_sanity():

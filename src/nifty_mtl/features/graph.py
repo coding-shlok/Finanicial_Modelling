@@ -226,8 +226,8 @@ def graph_features(ret_w: pd.DataFrame, daily_ret: pd.DataFrame, bench_daily_ret
                 out[cols] = 0.0
                 continue
             block = r[cols]
-            tot = block.sum(1, min_count=1)
-            cnt = block.notna().sum(1)
+            tot = block.sum(axis=1, min_count=1)
+            cnt = block.notna().sum(axis=1)
             peer = (tot.to_numpy()[:, None] - block.fillna(0).to_numpy()) / np.clip((cnt.to_numpy()[:, None] - block.notna().astype(int).to_numpy()), 1, None)
             out[cols] = np.where(block.notna(), peer, np.nan)
         F[key] = out.to_numpy()

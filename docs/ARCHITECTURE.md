@@ -164,7 +164,7 @@ Three `mode` values:
     over the 60 lags **before** taking the absolute value (net effect over the
     lookback); `mode="mass"` takes absolute value **before** summing (total
     attribution mass regardless of sign cancellation). Both are reported;
-    they agree that graph features dominate (76% signed, 68% mass).
+    they agree that graph features dominate (75% signed, 67% mass).
 - `interpret/failure.py::regime_table` reads market-wide static features (all
   stocks share the same value in a given week) via the first `sample_ok`
   stock at that week — a convenience since e.g. `mkt_vol_20d` is identical

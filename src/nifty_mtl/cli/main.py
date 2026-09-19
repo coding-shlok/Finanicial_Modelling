@@ -106,8 +106,13 @@ def recommend(checkpoint: str = "final", week: str = typer.Option(None, help="de
         masks = week_masks(fs, cfg.splits)
         ds_bg = WeekDataset(fs, sc, np.where(masks["train"])[0], target_mode=tmode)
         res = compute_shap(model, sc, ds_bg, ds, n_background=200, n_explain=None)
+        def _fmt_factor(v: float) -> str:
+            # fixed .2f loses all information when |v| < 0.005 (common for a heavily
+            # regularized model); fall back to 3 significant figures in that case.
+            return f"{v:+.2f}" if abs(v) >= 0.005 else f"{v:+.2g}"
+
         for i, s in enumerate(res.symbols):
-            factors[s] = ", ".join(f"{n} {v:+.2f}" for n, v in res.explain_sample(i, 3).items())
+            factors[s] = ", ".join(f"{n} {_fmt_factor(v)}" for n, v in res.explain_sample(i, 3).items())
 
     tbl = Table(title=f"Recommendations for week ending {wk.date()} (decision at Friday close, horizon = next week)")
     for c in ["Rank", "Symbol", "Sector", "Signal", "E[ret]", "E[vol]", "Score", "Pctl", "Top factors (SHAP on score)"]:
