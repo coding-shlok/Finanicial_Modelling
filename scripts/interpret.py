@@ -51,28 +51,41 @@ def main():
     ds_train = WeekDataset(fs, sc, np.where(masks["train"])[0], target_mode=tmode)
     ds_test = WeekDataset(fs, sc, np.where(masks["test"])[0], target_mode=tmode)
 
-    # ---------------- attention
-    att = collect_attention(model, ds_test, device)
-    by_lag = attention_by_lag(att); by_lag.to_csv(TABLES / "attention_by_lag.csv")
-    conc = attention_concentration(att); (TABLES / "attention_concentration.json").write_text(json.dumps(conc, indent=2))
-    log.info("attention concentration: %s", conc)
-    fig, axes = plt.subplots(1, 2, figsize=(8, 2.8))
-    axes[0].plot(by_lag.index, by_lag.pool_all, color=P.PALETTE["blue"], label="all weeks")
-    axes[0].plot(by_lag.index, by_lag.pool_high_vol, color=P.PALETTE["orange"], lw=1.1, label="high-vol regime")
-    axes[0].plot(by_lag.index, by_lag.pool_low_vol, color=P.PALETTE["aqua"], lw=1.1, label="low-vol regime")
-    axes[0].axhline(1 / 60, color=P.TEXT2, lw=0.8, ls=":"); axes[0].set_xlabel("weeks before decision"); axes[0].set_ylabel("pooling attention")
-    axes[0].invert_xaxis(); axes[0].legend(); axes[0].set_title("Which past weeks the model attends to")
-    axes[1].plot(by_lag.index, by_lag.self_attn_all, color=P.PALETTE["blue"]); axes[1].invert_xaxis()
-    axes[1].axhline(1 / 60, color=P.TEXT2, lw=0.8, ls=":"); axes[1].set_xlabel("weeks before decision"); axes[1].set_title("Self-attention received (last layer)")
-    P.save(fig, FIGURES / "attention_by_lag.png")
+    # ---------------- attention (tuned model and PRD-default model: the tuned weight decay prunes attention)
+    for ckpt, tag in [("final", "tuned"), ("baseline_default", "prd_default")]:
+        m_, sc_, ck_ = load_checkpoint(ckpt)
+        ds_ = WeekDataset(fs, sc_, np.where(masks["test"])[0], target_mode=ck_.get("target_mode", "raw"))
+        att = collect_attention(m_, ds_, device)
+        by_lag = attention_by_lag(att); by_lag.to_csv(TABLES / f"attention_by_lag_{tag}.csv")
+        conc = attention_concentration(att); conc["attn_in_proj_norm"] = float(m_.blocks[0].attn.in_proj_weight.norm())
+        (TABLES / f"attention_concentration_{tag}.json").write_text(json.dumps(conc, indent=2))
+        if tag == "tuned":
+            by_lag.to_csv(TABLES / "attention_by_lag.csv"); (TABLES / "attention_concentration.json").write_text(json.dumps(conc, indent=2))
+        log.info("attention concentration [%s]: %s", tag, conc)
+        fig, axes = plt.subplots(1, 2, figsize=(8, 2.8))
+        axes[0].plot(by_lag.index, by_lag.pool_all, color=P.PALETTE["blue"], label="all weeks")
+        axes[0].plot(by_lag.index, by_lag.pool_high_vol, color=P.PALETTE["orange"], lw=1.1, label="high-vol regime")
+        axes[0].plot(by_lag.index, by_lag.pool_low_vol, color=P.PALETTE["aqua"], lw=1.1, label="low-vol regime")
+        axes[0].axhline(1 / 60, color=P.TEXT2, lw=0.8, ls=":"); axes[0].set_xlabel("weeks before decision"); axes[0].set_ylabel("pooling attention")
+        axes[0].invert_xaxis(); axes[0].legend(); axes[0].set_title(f"Pooling attention ({tag.replace('_', ' ')} model)")
+        axes[1].plot(by_lag.index, by_lag.self_attn_all, color=P.PALETTE["blue"]); axes[1].invert_xaxis()
+        axes[1].axhline(1 / 60, color=P.TEXT2, lw=0.8, ls=":"); axes[1].set_xlabel("weeks before decision"); axes[1].set_title("Self-attention received (last layer)")
+        P.save(fig, FIGURES / f"attention_by_lag_{tag}.png")
+        if tag == "tuned":
+            P.save(fig, FIGURES / "attention_by_lag.png") if False else None
+    import shutil
+    for ext in ["png", "pdf"]:
+        shutil.copy(FIGURES / f"attention_by_lag_prd_default.{ext}", FIGURES / f"attention_by_lag.{ext}")
 
     # ---------------- SHAP
     shap_res = compute_shap(model, sc, ds_train, ds_test, n_background=300, n_explain=600)
     fi = shap_res.feature_importance(); gi = shap_res.group_importance(); li = shap_res.lag_importance()
     fi.to_csv(TABLES / "shap_feature_importance.csv"); gi.to_csv(TABLES / "shap_group_importance.csv"); li.to_csv(TABLES / "shap_lag_importance.csv")
     top5 = shap_res.top5_share()
+    gi_mass = shap_res.group_importance("mass"); gi_mass.to_csv(TABLES / "shap_group_importance_mass.csv")
     kpi = {"top5_share_of_mean_abs_shap": top5, "top10_share": float(fi.iloc[:10].sum() / fi.sum()),
-           "graph_share": float(gi[[g for g in gi.index if g.startswith("graph")]].sum() / gi.sum())}
+           "graph_share": float(gi[[g for g in gi.index if g.startswith("graph")]].sum() / gi.sum()),
+           "graph_share_mass": float(gi_mass[[g for g in gi_mass.index if g.startswith("graph")]].sum() / gi_mass.sum())}
     (TABLES / "shap_kpis.json").write_text(json.dumps(kpi, indent=2)); log.info("SHAP KPIs: %s", kpi)
 
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.6), gridspec_kw={"width_ratios": [1.3, 1]})

@@ -1,0 +1,10 @@
+12:43:37 walk-forward from 2023-07-01 with params {'dropout': 0.30000000000000004, 'lr': 0.0028781002826092387, 'weight_decay': 0.0005717421310401361, 'w_return': 0.6000000000000001, 'lambda_turnover': 0.0, 'target_mode': 'raw'}
+12:43:37 [mtl] fold 5: train 2019-01-04..2024-03-29 | val 2024-04-05..2024-09-27 | predict 2024-10-04..2024-12-27
+13:49:51 [mtl] fold 5 done: best epochs [39, 31, 2]
+13:49:51 [mtl] fold 6: train 2019-01-04..2024-06-28 | val 2024-07-05..2024-12-27 | predict 2025-01-03..2025-03-28
+14:27:50 [mtl] fold 6 done: best epochs [6, 13, 5]
+14:27:50 [mtl] fold 7: train 2019-01-04..2024-09-27 | val 2024-10-04..2025-03-28 | predict 2025-04-04..2025-06-27
+14:54:45 [mtl] fold 7 done: best epochs [3, 2, 10]
+14:54:45 [mtl] fold 8: train 2019-01-04..2024-12-27 | val 2025-01-03..2025-06-27 | predict 2025-07-04..2025-09-26
+15:33:43 [mtl] fold 8 done: best epochs [23, 26, 6]
+15:33:43 saved mtl: 52 weeks

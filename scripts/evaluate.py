@@ -9,6 +9,7 @@ import json
 import logging
 import warnings
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -29,7 +30,7 @@ log = logging.getLogger("eval")
 PREDS = RESULTS / "preds"
 
 VARIANT_LABEL = {"mtl": "MTL (ours)", "mtl_nograph": "MTL no-graph", "mtl_ret_only": "MTL return-only",
-                 "mtl_nocost": "MTL no-cost", "logistic": "Logistic"}
+                 "mtl_nocost": "MTL no-cost", "mtl_cost": "MTL +cost-term", "logistic": "Logistic"}
 
 
 def weekly_ic(score: pd.DataFrame, rr: pd.DataFrame) -> pd.Series:
@@ -63,6 +64,7 @@ def main():
     oos_index = scores["MTL (ours)"].index
     scores["Momentum"] = momentum_scores(fs).loc[oos_index]
     scores["Inverse-vol"] = inverse_vol_scores(fs).loc[oos_index]
+    scores = {k: v.reindex(oos_index) for k, v in scores.items()}
     periods = {
         "test": oos_index[(oos_index >= cfg.splits.test_start) & (oos_index <= cfg.splits.test_end)],
         "holdout": oos_index[oos_index >= cfg.splits.holdout_start],
@@ -75,7 +77,10 @@ def main():
         if len(idx) == 0:
             continue
         for label, sc in scores.items():
-            res = run_backtest(sc.loc[idx], rr.loc[idx], cfg.backtest, rf)
+            covered = sc.reindex(idx).notna().any(axis=1).mean()
+            if covered < 0.9:          # ablations run on the test period only are not reported elsewhere
+                continue
+            res = run_backtest(sc.reindex(idx), rr.loc[idx], cfg.backtest, rf)
             s = summary(res.ret, bench.loc[idx], rf, res.turnover)
             s.update({"strategy": label, "period": pname, "mean_ic": float(weekly_ic(sc.loc[idx], rr.loc[idx]).mean())})
             if pname == "all_oos":
@@ -94,7 +99,7 @@ def main():
             lo, hi = bootstrap_sharpe_ci(bench.loc[idx].dropna(), rf); b["sharpe_ci_lo"], b["sharpe_ci_hi"] = lo, hi
         rows.append(b)
     main_tbl = pd.DataFrame(rows).set_index(["period", "strategy"])
-    cols = ["cagr", "ann_vol", "sharpe", "sharpe_weekly", "sortino", "max_drawdown", "calmar", "win_rate",
+    cols = ["n_weeks", "cagr", "ann_vol", "sharpe", "sharpe_weekly", "sortino", "max_drawdown", "calmar", "win_rate",
             "profit_factor", "information_ratio", "mean_ic", "avg_weekly_turnover", "sharpe_ci_lo", "sharpe_ci_hi"]
     main_tbl = main_tbl.reindex(columns=[c for c in cols if c in main_tbl.columns])
     main_tbl.to_csv(TABLES / "main_results.csv")
@@ -123,6 +128,16 @@ def main():
         bc = BacktestConfig(**{**cfg.backtest.__dict__, "top_frac": frac, "max_position": 1.0 / max(1, round(frac * 48))})
         res = run_backtest(mtl, rr.loc[oos_index], bc, rf)
         sens.append({"setting": f"top {frac:.0%} of universe", "sharpe": sharpe(res.ret, rf), "cagr": summary(res.ret)["cagr"]})
+    # post-hoc decision-layer variants (not used for any selection; reported for diagnosis)
+    mtl_preds = Predictions.load(PREDS / "mtl.h5")
+    for name, sc in [("decision: E[ret]/E[vol] (default)", mtl_preds.score), ("decision: E[ret] only", mtl_preds.ret),
+                     ("decision: E[ret]/(E[vol]+0.03)", mtl_preds.ret / (mtl_preds.vol + 0.03)),
+                     ("decision: -E[vol] only", -mtl_preds.vol)]:
+        sc = sc.reindex(oos_index)
+        for pname, idx in periods.items():
+            res = run_backtest(sc.loc[idx], rr.loc[idx], cfg.backtest, rf)
+            sens.append({"setting": f"{name} [{pname}]", "sharpe": sharpe(res.ret, rf), "cagr": summary(res.ret)["cagr"],
+                         "ic": float(weekly_ic(sc.loc[idx], rr.loc[idx]).mean())})
     sens_tbl = pd.DataFrame(sens).set_index("setting")
     sens_tbl.to_csv(TABLES / "sensitivity.csv"); (TABLES / "sensitivity.md").write_text(sens_tbl.round(3).to_markdown())
     log.info("\n%s", sens_tbl.round(3).to_string())
@@ -162,9 +177,11 @@ def main():
         ax.plot(eq.index, eq.values, color=P.color(label), label=label, lw=2.0 if label == "MTL (ours)" else 1.2,
                 ls="-" if label != "Nifty 50" else "--")
     ax.axvspan(pd.Timestamp(cfg.splits.holdout_start), oos_index[-1], color="#f2f1ec", zorder=0, lw=0)
-    ax.text(pd.Timestamp(cfg.splits.holdout_start), ax.get_ylim()[1] * 0.98, " untouched holdout", va="top", color=P.TEXT2, fontsize=8)
     ax.set_yscale("log"); ax.set_ylabel("Growth of 1 (log)"); ax.set_title("Out-of-sample equity curves, net of 0.1%/side costs")
+    ax.text(pd.Timestamp(cfg.splits.holdout_start), ax.get_ylim()[0] * 1.02, " untouched holdout", va="bottom", color=P.TEXT2, fontsize=8)
+    ax.text(oos_index[0], ax.get_ylim()[0] * 1.02, " PRD test period", va="bottom", color=P.TEXT2, fontsize=8)
     ax.legend(ncol=2, loc="upper left")
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 7])); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b\n%Y"))
     P.save(fig, FIGURES / "equity_curves.png")
 
     # 2. drawdowns
@@ -175,6 +192,7 @@ def main():
         ax.fill_between(dd.index, dd.values, 0, color=P.color(label), alpha=0.25 if label == "MTL (ours)" else 0.12, lw=0)
         ax.plot(dd.index, dd.values, color=P.color(label), lw=1.2, label=label)
     ax.set_ylabel("Drawdown"); ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"{v:.0%}")); ax.legend(loc="lower left")
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 7])); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b\n%Y"))
     P.save(fig, FIGURES / "drawdowns.png")
 
     # 3. decile bar chart
@@ -189,9 +207,10 @@ def main():
     for label in ["MTL (ours)", "Momentum", "Logistic"]:
         if label not in scores:
             continue
-        ic = weekly_ic(scores[label], rr.loc[oos_index]).rolling(26, min_periods=13).mean()
+        ic = weekly_ic(scores[label].dropna(how="all"), rr.loc[oos_index]).rolling(26, min_periods=13).mean()
         ax.plot(ic.index, ic.values, color=P.color(label), label=label, lw=1.4)
     ax.axhline(0, color=P.TEXT2, lw=0.8); ax.set_ylabel("Rolling 26w rank-IC"); ax.legend(ncol=3)
+    ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 7])); ax.xaxis.set_major_formatter(mdates.DateFormatter("%b\n%Y"))
     P.save(fig, FIGURES / "rolling_ic.png")
 
     # 5. Sharpe with bootstrap CIs (all OOS)

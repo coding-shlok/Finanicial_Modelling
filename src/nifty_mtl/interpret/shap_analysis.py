@@ -60,14 +60,15 @@ class ShapResult:
     seq_names: list[str]
     static_names: list[str]
 
-    def feature_importance(self) -> pd.Series:
-        """Global mean |SHAP| per feature (sequence features summed over lags)."""
-        seq_imp = np.abs(self.seq_values.sum(1)).mean(0)
+    def feature_importance(self, mode: str = "signed") -> pd.Series:
+        """Global mean |SHAP| per feature. Sequence features are aggregated over the 60 lags:
+        ``signed`` = |sum over lags| (net effect), ``mass`` = sum over lags of |SHAP| (total mass)."""
+        seq_imp = np.abs(self.seq_values.sum(1)).mean(0) if mode == "signed" else np.abs(self.seq_values).sum(1).mean(0)
         st_imp = np.abs(self.static_values).mean(0)
         return pd.Series(np.concatenate([seq_imp, st_imp]), index=self.seq_names + self.static_names).sort_values(ascending=False)
 
-    def group_importance(self) -> pd.Series:
-        fi = self.feature_importance()
+    def group_importance(self, mode: str = "signed") -> pd.Series:
+        fi = self.feature_importance(mode)
         out = {g: float(fi.reindex(names).fillna(0).sum()) for g, names in GROUPS.items()}
         out["sector_onehot"] = float(fi[[n for n in fi.index if n.startswith("sector_")]].sum())
         return pd.Series(out).sort_values(ascending=False)

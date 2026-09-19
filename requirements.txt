@@ -19,3 +19,4 @@ rich>=13.7
 pytest>=8.0
 jupyter>=1.0
 statsmodels>=0.14
+tabulate>=0.9

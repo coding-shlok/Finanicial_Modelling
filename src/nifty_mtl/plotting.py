@@ -15,6 +15,7 @@ SERIES = {
     "MTL no-graph": PALETTE["violet"],
     "MTL return-only": PALETTE["magenta"],
     "MTL no-cost": PALETTE["aqua"],
+    "MTL +cost-term": PALETTE["aqua"],
     "Momentum": PALETTE["orange"],
     "Inverse-vol": PALETTE["yellow"],
     "Logistic": PALETTE["green"],

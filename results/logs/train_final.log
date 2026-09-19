@@ -1,2 +1,52 @@
 12:03:08 [final] ep   1  train 0.9542  val 0.6416  valSharpe -0.505  IC -0.0317  * (11s)
 12:03:19 [final] ep   2  train 0.9264  val 0.5953  valSharpe -0.224  IC +0.0138  * (22s)
+12:03:41 [final] ep   4  train 0.9296  val 0.6493  valSharpe +1.212  IC +0.0404  * (44s)
+12:03:53 [final] ep   5  train 0.9259  val 0.6081  valSharpe +2.676  IC +0.0523  * (55s)
+12:04:15 [final] ep   7  train 0.9006  val 0.5970  valSharpe +1.051  IC +0.0567  * (78s)
+12:04:27 [final] ep   8  train 0.9080  val 0.5934  valSharpe +1.598  IC +0.0660  * (90s)
+12:04:51 [final] ep  10  train 0.8939  val 0.5812  valSharpe +2.472  IC +0.0666  * (113s)
+12:05:50 [final] ep  15  train 0.8868  val 0.5996  valSharpe +1.462  IC +0.0443   (173s)
+12:06:50 [final] ep  20  train 0.8997  val 0.6352  valSharpe +0.699  IC +0.0524   (233s)
+12:07:51 [final] ep  25  train 0.8883  val 0.6215  valSharpe +2.003  IC +0.0247   (293s)
+12:09:01 [final] ep  30  train 0.8912  val 0.5868  valSharpe +0.955  IC -0.0097   (364s)
+12:09:01 [final] early stop at epoch 30 (best 10, val Sharpe 2.472)
+12:09:08 final done: best epoch 10
+12:09:21 [final_sharpe_stop] ep   1  train 0.9542  val 0.6416  valSharpe -0.505  IC -0.0317  * (13s)
+12:09:33 [final_sharpe_stop] ep   2  train 0.9264  val 0.5953  valSharpe -0.224  IC +0.0138  * (25s)
+12:09:46 [final_sharpe_stop] ep   3  train 0.9076  val 0.6072  valSharpe +1.696  IC -0.0152  * (38s)
+12:10:10 [final_sharpe_stop] ep   5  train 0.9259  val 0.6081  valSharpe +2.676  IC +0.0523  * (62s)
+12:11:17 [final_sharpe_stop] ep  10  train 0.8939  val 0.5812  valSharpe +2.472  IC +0.0666   (130s)
+12:12:01 [final_sharpe_stop] ep  13  train 0.8971  val 0.6208  valSharpe +2.681  IC +0.0516  * (173s)
+12:12:17 [final_sharpe_stop] ep  14  train 0.9002  val 0.6058  valSharpe +3.439  IC +0.0523  * (189s)
+12:12:35 [final_sharpe_stop] ep  15  train 0.8868  val 0.5996  valSharpe +1.462  IC +0.0443   (207s)
+12:13:48 [final_sharpe_stop] ep  20  train 0.8997  val 0.6352  valSharpe +0.699  IC +0.0524   (280s)
+12:15:03 [final_sharpe_stop] ep  25  train 0.8883  val 0.6215  valSharpe +2.003  IC +0.0247   (355s)
+12:16:17 [final_sharpe_stop] ep  30  train 0.8912  val 0.5868  valSharpe +0.955  IC -0.0097   (429s)
+12:17:16 [final_sharpe_stop] early stop at epoch 34 (best 14, val Sharpe 3.439)
+12:17:21 final_sharpe_stop done: best epoch 14
+12:17:35 [final_nograph] ep   1  train 1.0024  val 0.6594  valSharpe +1.800  IC +0.0220  * (14s)
+12:18:32 [final_nograph] ep   5  train 0.9733  val 0.6877  valSharpe +1.112  IC +0.0156   (72s)
+12:19:43 [final_nograph] ep  10  train 0.9664  val 0.6001  valSharpe +0.339  IC +0.0039   (143s)
+12:20:59 [final_nograph] ep  15  train 0.9661  val 0.6266  valSharpe +0.120  IC +0.0051   (218s)
+12:22:08 [final_nograph] ep  20  train 0.9627  val 0.6192  valSharpe +1.011  IC +0.0035   (288s)
+12:22:22 [final_nograph] early stop at epoch 21 (best 1, val Sharpe 1.800)
+12:22:27 final_nograph done: best epoch 1
+12:22:42 [final_ret_only] ep   1  train 1.0154  val 0.6549  valSharpe +0.432  IC -0.0814  * (15s)
+12:22:58 [final_ret_only] ep   2  train 1.0008  val 0.6550  valSharpe +0.011  IC -0.0717  * (32s)
+12:23:14 [final_ret_only] ep   3  train 1.0009  val 0.6549  valSharpe +0.707  IC -0.0605  * (47s)
+12:23:28 [final_ret_only] ep   4  train 1.0008  val 0.6564  valSharpe +0.454  IC -0.0536  * (61s)
+12:23:42 [final_ret_only] ep   5  train 1.0002  val 0.6580  valSharpe +0.517  IC -0.0598   (76s)
+12:24:11 [final_ret_only] ep   7  train 1.0035  val 0.6538  valSharpe +0.815  IC -0.0158  * (104s)
+12:24:53 [final_ret_only] ep  10  train 0.9994  val 0.6576  valSharpe +0.553  IC -0.0628   (147s)
+12:26:05 [final_ret_only] ep  15  train 0.9935  val 0.6724  valSharpe +0.294  IC -0.0308   (219s)
+12:27:17 [final_ret_only] ep  20  train 0.9920  val 0.6807  valSharpe +0.828  IC -0.0477   (290s)
+12:28:32 [final_ret_only] ep  25  train 0.9830  val 0.6824  valSharpe -0.064  IC -0.0397   (365s)
+12:29:02 [final_ret_only] early stop at epoch 27 (best 7, val Sharpe 0.815)
+12:29:07 final_ret_only done: best epoch 7
+12:29:07 
+split              holdout    test     val
+variant                                   
+final              -0.0105  0.0457  0.0666
+final_nograph      -0.0257 -0.0248  0.0220
+final_ret_only     -0.0194  0.0301 -0.0158
+final_sharpe_stop  -0.0001  0.0409  0.0523

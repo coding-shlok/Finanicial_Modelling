@@ -1,0 +1,31 @@
+\begin{tabular}{lrr}
+\toprule
+Setting & Sharpe & CAGR \\
+\midrule
+cost 0.00\%/side & 0.90 & 23.9\% \\
+cost 0.05\%/side & 0.83 & 22.4\% \\
+cost 0.10\%/side & 0.77 & 20.9\% \\
+cost 0.15\%/side & 0.70 & 19.4\% \\
+cost 0.25\%/side & 0.57 & 16.5\% \\
+max position 5\% & 0.77 & 10.3\% \\
+max position 10\% & 0.77 & 14.0\% \\
+max position 20\% & 0.77 & 20.9\% \\
+mode rebalance & 0.77 & 20.9\% \\
+mode hold\_zone & 0.67 & 17.0\% \\
+mode long\_short & 0.40 & 12.8\% \\
+top 10\% of universe & 0.77 & 20.9\% \\
+top 20\% of universe & 0.55 & 14.4\% \\
+decision: $\hat r$/$\hat\sigma$ (default) {[}test{]} & 2.54 & 74.9\% \\
+decision: $\hat r$/$\hat\sigma$ (default) {[}holdout{]} & -1.12 & -12.4\% \\
+decision: $\hat r$/$\hat\sigma$ (default) {[}all\_oos{]} & 0.77 & 20.9\% \\
+decision: $\hat r$ only {[}test{]} & 2.26 & 62.3\% \\
+decision: $\hat r$ only {[}holdout{]} & -0.11 & 0.1\% \\
+decision: $\hat r$ only {[}all\_oos{]} & 0.82 & 25.5\% \\
+decision: $\hat r$/($\hat\sigma$+0.03) {[}test{]} & 2.38 & 67.6\% \\
+decision: $\hat r$/($\hat\sigma$+0.03) {[}holdout{]} & -0.21 & -0.3\% \\
+decision: $\hat r$/($\hat\sigma$+0.03) {[}all\_oos{]} & 0.95 & 27.0\% \\
+decision: -$\hat\sigma$ only {[}test{]} & 0.24 & 9.1\% \\
+decision: -$\hat\sigma$ only {[}holdout{]} & -1.79 & -16.7\% \\
+decision: -$\hat\sigma$ only {[}all\_oos{]} & -0.80 & -5.5\% \\
+\bottomrule
+\end{tabular}

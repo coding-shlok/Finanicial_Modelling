@@ -11,3 +11,6 @@ paper/*.log
 paper/*.out
 paper/*.bbl
 paper/*.blg
+results/preds/*.h5
+paper/main.pdf
+paper/figures/

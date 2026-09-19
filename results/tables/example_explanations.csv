@@ -1,0 +1,10 @@
+week,symbol,factor1,factor2,factor3,factor4
+2023-07-07,ADANIPORTS,mkt_ma26_dev (+0.003),mkt_vol_20d (+0.002),corr_energy (+0.002),mkt_avg_corr (+0.002)
+2023-07-07,BEL,clustering (+0.003),corr_mkt (+0.003),pca_3 (-0.003),beta_sector (-0.003)
+2023-07-07,EICHERMOT,corr_energy (+0.002),clustering (+0.002),corr_mkt (+0.002),rel_strength_4w (-0.002)
+2023-07-07,HDFCLIFE,beta_mkt (+0.003),beta_sector (+0.002),mkt_dispersion (-0.001),peer_ret_4w (+0.001)
+2023-07-07,HINDUNILVR,sector_FMCG (-0.005),corr_mkt (+0.004),mkt_dispersion (-0.003),clustering (+0.002)
+2023-07-07,ITC,sector_FMCG (-0.004),mkt_dispersion (-0.003),atr14 (-0.002),corr_mkt (+0.002)
+2023-07-07,M&M,beta_mkt (+0.002),clustering (+0.002),rel_strength_4w (+0.002),beta_sector (+0.002)
+2023-07-07,MARUTI,corr_mkt (+0.007),beta_mkt (-0.005),clustering (+0.005),pca_3 (-0.004)
+2023-07-07,SBILIFE,peer_ret_4w (+0.003),clustering (+0.002),corr_energy (+0.002),mkt_dispersion (-0.002)

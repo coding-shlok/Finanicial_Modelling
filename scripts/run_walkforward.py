@@ -23,6 +23,7 @@ import pandas as pd
 from nifty_mtl.backtest.walkforward import walk_forward_logistic, walk_forward_mtl
 from nifty_mtl.config import RESULTS, Config, load_universe
 from nifty_mtl.features.build import FeatureSet
+from nifty_mtl.models.train import Predictions
 
 warnings.filterwarnings("ignore")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
@@ -49,6 +50,8 @@ def main():
     ap.add_argument("--epochs", type=int, default=80)
     ap.add_argument("--patience", type=int, default=15)
     ap.add_argument("--end", default=None, help="last prediction week (default: latest)")
+    ap.add_argument("--folds", default=None, help="fold shard a:b (predictions saved as <variant>_f<a>-<b>.h5)")
+    ap.add_argument("--merge", action="store_true", help="merge <variant>_f*.h5 shards into <variant>.h5 and exit")
     args = ap.parse_args()
 
     fs = FeatureSet.load(); u = load_universe()
@@ -59,6 +62,22 @@ def main():
     start = cfg.splits.test_start
     log.info("walk-forward from %s with params %s", start, best)
 
+    if args.merge:
+        for v in args.variants:
+            shards = sorted(PREDS.glob(f"{v}_f*.h5"))
+            parts = [Predictions.load(p) for p in shards]
+            merged = Predictions(pd.concat([p.ret for p in parts]).sort_index(), pd.concat([p.vol for p in parts]).sort_index(),
+                                 pd.concat([p.score for p in parts]).sort_index())
+            merged = Predictions(merged.ret[~merged.ret.index.duplicated()], merged.vol[~merged.vol.index.duplicated()],
+                                 merged.score[~merged.score.index.duplicated()])
+            merged.save(PREDS / f"{v}.h5")
+            infos = pd.concat([pd.read_csv(p) for p in sorted(PREDS.glob(f"{v}_f*_folds.csv"))])
+            infos.to_csv(PREDS / f"{v}_folds.csv", index=False)
+            log.info("merged %d shards -> %s (%d weeks)", len(shards), PREDS / f"{v}.h5", len(merged.score))
+        return
+
+    fr = tuple(int(x) for x in args.folds.split(":")) if args.folds else None
+    suffix = f"_f{fr[0]}-{fr[1]}" if fr else ""
     infos = {}
     for v in args.variants:
         if v == "logistic":
@@ -83,10 +102,10 @@ def main():
         if v == "mtl_cost":
             c.train.lambda_turnover = 0.3
         n_seeds = args.seeds if v == "mtl" else args.ablation_seeds
-        preds, info = walk_forward_mtl(fs, c, u.rf_weekly, start, args.end, n_seeds=n_seeds, tag=v, **kw)
-        preds.save(PREDS / f"{v}.h5")
+        preds, info = walk_forward_mtl(fs, c, u.rf_weekly, start, args.end, n_seeds=n_seeds, tag=v, fold_range=fr, **kw)
+        preds.save(PREDS / f"{v}{suffix}.h5")
         infos[v] = info
-        pd.DataFrame(info).to_csv(PREDS / f"{v}_folds.csv", index=False)
+        pd.DataFrame(info).to_csv(PREDS / f"{v}{suffix}_folds.csv", index=False)
         log.info("saved %s: %d weeks", v, len(preds.score))
 
 

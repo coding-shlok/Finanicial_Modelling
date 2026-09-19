@@ -66,8 +66,11 @@ def _average(preds: list[Predictions]) -> Predictions:
 
 
 def walk_forward_mtl(fs: FeatureSet, cfg: Config, rf_weekly: float, start: str, end: str | None = None,
-                     n_seeds: int = 1, use_graph: bool = True, tasks=("ret", "vol"), tag: str = "wf") -> tuple[Predictions, list[dict]]:
+                     n_seeds: int = 1, use_graph: bool = True, tasks=("ret", "vol"), tag: str = "wf",
+                     fold_range: tuple[int, int] | None = None) -> tuple[Predictions, list[dict]]:
     folds = make_folds(fs, cfg, start, end)
+    if fold_range is not None:
+        folds = [f for f in folds if fold_range[0] <= f.k < fold_range[1]]
     device = pick_device(cfg.train.device)
     smask = static_mask_for(fs, use_graph)
     out, info = [], []
