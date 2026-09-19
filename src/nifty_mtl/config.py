@@ -103,6 +103,9 @@ class TrainConfig:
     w_vol: float = 0.5
     lambda_turnover: float = 0.0      # 0 = plain MTL; >0 adds differentiable transaction-cost term
     cost_per_side: float = 0.001
+    tau: float = 0.1                  # softmax temperature for soft portfolio weights in the cost term
+    target_mode: str = "raw"          # "raw" next-week return or "cs_demean" (minus weekly cross-sectional mean)
+    early_stop_metric: str = "ic"     # "ic" (rank-IC, low noise) or "sharpe" (PRD; noisy on a 26-week val set)
     seed: int = 42
     device: str = "auto"
 
@@ -112,7 +115,9 @@ class BacktestConfig:
     top_frac: float = 0.10
     bottom_frac: float = 0.10
     cost_per_side: float = 0.001
-    max_position: float = 0.05
+    # PRD says 5%, but with a 50-stock universe the top decile is 5 names -> 5% cap would leave 75% in cash.
+    # Default = fully invested across the 5 picks; the 5% cap is reported as a sensitivity.
+    max_position: float = 0.20
     initial_capital: float = 1_000_000.0
     retrain_every_weeks: int = 13
 
