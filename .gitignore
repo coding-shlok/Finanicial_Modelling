@@ -12,5 +12,6 @@ paper/*.out
 paper/*.bbl
 paper/*.blg
 results/preds/*.h5
-paper/main.pdf
-paper/figures/
+
+# paper/main.pdf and paper/figures/ ARE tracked (compiled deliverable, viewable on GitHub
+# without installing tectonic). Only LaTeX build byproducts above are ignored.

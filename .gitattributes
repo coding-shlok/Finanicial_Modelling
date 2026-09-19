@@ -1,0 +1,5 @@
+*.ipynb -diff
+*.h5 -diff -text
+*.pt -diff -text
+*.png -diff -text
+*.pdf -diff -text
