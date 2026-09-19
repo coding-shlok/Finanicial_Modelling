@@ -1,0 +1,2 @@
+[console_scripts]
+nifty-mtl = nifty_mtl.cli.main:app

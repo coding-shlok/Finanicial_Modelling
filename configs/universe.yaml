@@ -1,0 +1,76 @@
+# Nifty 50 constituents (current as of Sept 2026) with curated sector labels.
+# Sector taxonomy: 11 groups roughly following NSE industry classification.
+# NOTE: survivorship bias — this is the *current* index membership (see PRD §12).
+benchmark: "^NSEI"
+risk_free_annual: 0.065
+
+# Corporate actions not handled by yfinance auto_adjust. Prices strictly before
+# ex_date are multiplied by open(ex_date)/close(ex_date - 1) so the event does
+# not appear as a return.
+spinoffs:
+  TATAMOTORS: {ex_date: "2025-10-14", note: "Demerger of Tata Motors CV (TMCV); TATAMOTORS renamed TMPV"}
+
+sectors:
+  - Banks
+  - Financial Services
+  - IT
+  - Energy
+  - FMCG
+  - Auto
+  - Pharma & Healthcare
+  - Metals & Mining
+  - Infra & Cement
+  - Telecom & Media
+  - Consumer
+
+stocks:
+  ADANIENT:    {sector: Infra & Cement,          name: Adani Enterprises}
+  ADANIPORTS:  {sector: Infra & Cement,          name: Adani Ports}
+  APOLLOHOSP:  {sector: Pharma & Healthcare,     name: Apollo Hospitals}
+  ASIANPAINT:  {sector: Consumer,                name: Asian Paints}
+  AXISBANK:    {sector: Banks,                   name: Axis Bank}
+  BAJAJ-AUTO:  {sector: Auto,                    name: Bajaj Auto}
+  BAJFINANCE:  {sector: Financial Services,      name: Bajaj Finance}
+  BAJAJFINSV:  {sector: Financial Services,      name: Bajaj Finserv}
+  BEL:         {sector: Infra & Cement,          name: Bharat Electronics}
+  BHARTIARTL:  {sector: Telecom & Media,         name: Bharti Airtel}
+  CIPLA:       {sector: Pharma & Healthcare,     name: Cipla}
+  COALINDIA:   {sector: Metals & Mining,         name: Coal India}
+  DRREDDY:     {sector: Pharma & Healthcare,     name: Dr. Reddy's}
+  EICHERMOT:   {sector: Auto,                    name: Eicher Motors}
+  ETERNAL:     {sector: Consumer,                name: Eternal (Zomato)}
+  GRASIM:      {sector: Infra & Cement,          name: Grasim Industries}
+  HCLTECH:     {sector: IT,                      name: HCL Technologies}
+  HDFCBANK:    {sector: Banks,                   name: HDFC Bank}
+  HDFCLIFE:    {sector: Financial Services,      name: HDFC Life}
+  HINDALCO:    {sector: Metals & Mining,         name: Hindalco}
+  HINDUNILVR:  {sector: FMCG,                    name: Hindustan Unilever}
+  ICICIBANK:   {sector: Banks,                   name: ICICI Bank}
+  INDIGO:      {sector: Consumer,                name: InterGlobe Aviation}
+  INFY:        {sector: IT,                      name: Infosys}
+  ITC:         {sector: FMCG,                    name: ITC}
+  JIOFIN:      {sector: Financial Services,      name: Jio Financial}
+  JSWSTEEL:    {sector: Metals & Mining,         name: JSW Steel}
+  KOTAKBANK:   {sector: Banks,                   name: Kotak Mahindra Bank}
+  LT:          {sector: Infra & Cement,          name: Larsen & Toubro}
+  M&M:         {sector: Auto,                    name: Mahindra & Mahindra}
+  MARUTI:      {sector: Auto,                    name: Maruti Suzuki}
+  MAXHEALTH:   {sector: Pharma & Healthcare,     name: Max Healthcare}
+  NESTLEIND:   {sector: FMCG,                    name: Nestle India}
+  NTPC:        {sector: Energy,                  name: NTPC}
+  ONGC:        {sector: Energy,                  name: ONGC}
+  POWERGRID:   {sector: Energy,                  name: Power Grid}
+  RELIANCE:    {sector: Energy,                  name: Reliance Industries}
+  SBILIFE:     {sector: Financial Services,      name: SBI Life}
+  SBIN:        {sector: Banks,                   name: State Bank of India}
+  SHRIRAMFIN:  {sector: Financial Services,      name: Shriram Finance}
+  SUNPHARMA:   {sector: Pharma & Healthcare,     name: Sun Pharma}
+  TATACONSUM:  {sector: FMCG,                    name: Tata Consumer}
+  TATAMOTORS:  {sector: Auto,                    name: Tata Motors, ticker: TMPV}
+  TATASTEEL:   {sector: Metals & Mining,         name: Tata Steel}
+  TCS:         {sector: IT,                      name: TCS}
+  TECHM:       {sector: IT,                      name: Tech Mahindra}
+  TITAN:       {sector: Consumer,                name: Titan}
+  TRENT:       {sector: Consumer,                name: Trent}
+  ULTRACEMCO:  {sector: Infra & Cement,          name: UltraTech Cement}
+  WIPRO:       {sector: IT,                      name: Wipro}

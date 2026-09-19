@@ -1,0 +1,19 @@
+[project]
+name = "nifty-mtl"
+version = "0.1.0"
+description = "Multi-task deep learning with graph features for risk-adjusted stock selection on Nifty 50"
+requires-python = ">=3.11"
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+nifty-mtl = "nifty_mtl.cli.main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

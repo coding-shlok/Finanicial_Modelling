@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+data/raw/*.h5
+data/processed/*.h5
+results/checkpoints/*.pt
+results/optuna.db
+.ipynb_checkpoints/
+paper/*.aux
+paper/*.log
+paper/*.out
+paper/*.bbl
+paper/*.blg
