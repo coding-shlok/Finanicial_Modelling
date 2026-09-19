@@ -1,0 +1,33 @@
+# Default hyper-parameters (PRD §6). Overridden by results/best_params.json after tuning.
+model:
+  d_model: 64
+  n_heads: 8
+  n_layers: 2
+  d_hidden: 128
+  d_head: 64
+  dropout: 0.3
+  vol_clip: [0.01, 0.10]
+
+train:
+  lr: 0.001
+  weight_decay: 0.00001
+  epochs: 200
+  patience: 20
+  grad_clip: 1.0
+  w_return: 0.5
+  w_vol: 0.5
+  lambda_turnover: 0.0
+  cost_per_side: 0.001
+  tau: 0.1
+  target_mode: raw
+  early_stop_metric: ic
+  seed: 42
+  device: auto
+
+backtest:
+  top_frac: 0.10
+  bottom_frac: 0.10
+  cost_per_side: 0.001
+  max_position: 0.20
+  initial_capital: 1000000.0
+  retrain_every_weeks: 13

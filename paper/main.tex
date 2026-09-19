@@ -1,0 +1,176 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx,booktabs,amsmath,amssymb,url,xcolor,multirow}
+\usepackage[hidelinks]{hyperref}
+\input{numbers}
+
+\title{Multi-Task Deep Learning with Graph Features for Risk-Adjusted Stock Selection in Emerging Markets}
+
+\author{\IEEEauthorblockN{Pratik Shah}
+\IEEEauthorblockA{Independent Researcher\\ Email: studentplanchahiye@gmail.com}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Predicting absolute equity returns is notoriously difficult; predicting \emph{risk-adjusted} relative performance is a more tractable and more useful target for portfolio construction. We present a multi-task learning (MTL) model that jointly forecasts next-week return and next-week realized volatility for Nifty~50 constituents from a 60-week history processed by a two-layer self-attention encoder, augmented with 30 \emph{graph features} extracted from a weekly re-estimated stock--stock correlation network (PCA embeddings, peer momentum, correlation trends, eigenvector centrality and market-regime descriptors). Stocks are ranked by the Sharpe-like score $\hat{r}/\hat{\sigma}$; the top decile is bought and the bottom decile sold. Transaction costs enter the training objective through a differentiable turnover penalty on softmax-implied portfolio weights. In a walk-forward evaluation (retraining every 13 weeks, 0.1\% cost per side) over \MtlAllWeeks{} out-of-sample weeks from July~2023 to September~2026, the strategy achieves an annualized Sharpe ratio of \MtlAllSharpe{} (block-bootstrap 95\% CI \MtlAllSharpeCi) against \NiftyAllSharpe{} for the Nifty~50 and \MomAllSharpe{} for a momentum baseline, with a mean weekly rank information coefficient of \MtlAllIc. Ablations isolate the contributions of the volatility head and of the graph features; attention and SHAP analyses show that the model concentrates on the most recent weeks and that graph features account for \shapGraphShare{} of attribution mass. We also document a methodological pitfall: model selection on a 26-week validation Sharpe ratio is dominated by noise, and rank-IC is a far more stable criterion. All code, data scripts and results are released.
+\end{abstract}
+
+\begin{IEEEkeywords}
+multi-task learning, attention, graph features, stock selection, Indian equities, backtesting, interpretability
+\end{IEEEkeywords}
+
+% =====================================================================
+\section{Introduction}
+The weak-form efficient market hypothesis leaves little room for forecasting individual stock returns from price history alone, and the empirical literature on deep learning for return prediction is dominated by results that fail to survive realistic transaction costs or honest out-of-sample evaluation. Three observations motivate a different formulation.
+
+\textbf{Risk matters as much as return.} An investor ranks opportunities by risk-adjusted return, yet most learning systems regress the return alone; a stock with a large predicted return and enormous uncertainty is then recommended as confidently as a steady compounder. Jointly modelling return and volatility lets the decision layer rank on $\hat{r}/\hat{\sigma}$, and the volatility task---which is far more predictable than the return task because of volatility clustering---provides a strong auxiliary signal that regularizes a shared representation.
+
+\textbf{Stocks are not independent.} Sector co-movement, common factor exposure and time-varying correlation structure carry information about a stock's near-term behaviour that its own price history does not. We encode this structure with features computed on a correlation \emph{graph} that is re-estimated every week: eigen-decomposition embeddings, peer (sector) momentum, correlation trends against major sectors and the market, network centrality and its change, and a set of market-regime descriptors.
+
+\textbf{Costs must be part of the objective.} A weekly-rebalanced portfolio of a handful of names is a high-turnover strategy. Charging costs only in the backtest reports the damage; putting them in the loss function lets the model trade off signal strength against turnover.
+
+We build a system around these ideas for the Indian large-cap market and evaluate it with a walk-forward protocol on data through September~2026, holding back 2025--2026 as a period that no design decision ever touched. Our contributions are: (i) a joint return--volatility attention model with a decision layer that ranks on predicted Sharpe; (ii) a family of graph features from a weekly correlation network and an ablation quantifying their value; (iii) a differentiable transaction-cost term inside the training objective; (iv) an interpretability study using attention and SHAP; and (v) an honest, reproducible evaluation including the finding that validation Sharpe on short windows is an unreliable model-selection criterion.
+
+% =====================================================================
+\section{Related Work}
+\textbf{Stock prediction.} Classical approaches regress returns on technical indicators or accounting factors~\cite{fama1993,jegadeesh1993}. Deep sequence models (LSTM, temporal convolution, transformers) have been applied to daily prices~\cite{fischer2018,sezer2020}, with the recurring criticism that in-sample gains rarely translate to out-of-sample, cost-adjusted performance~\cite{gu2020}. Gu, Kelly and Xiu~\cite{gu2020} show that non-linear models add most value in the \emph{cross-section}, which motivates our cross-sectional ranking formulation and our optional cross-sectionally demeaned target.
+
+\textbf{Multi-task learning in finance.} MTL~\cite{caruana1997,ruder2017} has been used to share representations across horizons or across assets~\cite{ma2021mtl}. Predicting volatility alongside return is natural because volatility is strongly autocorrelated~\cite{engle1982,bollerslev1986} and realized-volatility forecasting with intraday data is well established~\cite{andersen2003}; the auxiliary task acts as an inductive bias for the noisier primary task.
+
+\textbf{Graphs in finance.} Correlation networks of equities exhibit sector structure, hubs and regime-dependent topology~\cite{mantegna1999,onnela2003}. Graph neural networks have been applied to stock prediction using industry or supply-chain relations~\cite{feng2019,chen2018}. We take a lighter route that keeps the model small and interpretable: we compute explicit graph statistics (embeddings, centrality, peer aggregates) and feed them as features, which also makes them directly attributable with SHAP.
+
+\textbf{Interpretability.} Attention weights offer a coarse view of which inputs the model uses~\cite{vaswani2017}; SHAP~\cite{lundberg2017} provides additive attributions with respect to a background distribution. We use both on the decision score rather than on the raw regression outputs.
+
+% =====================================================================
+\section{Methodology}
+\subsection{Problem formulation}
+Let $\mathcal{U}$ be the universe of $N$ stocks and let weeks be indexed by their Friday close $t$. For every stock $i$ with a clean 60-week history at $t$ we form a sequence $X_{i,t}\in\mathbb{R}^{60\times F_s}$ of own-history features and a static vector $z_{i,t}\in\mathbb{R}^{F_z}$ of graph and sector features. The targets are the next-week log return $r_{i,t+1}=\log(P_{i,t+1}/P_{i,t})$ and the next-week realized volatility $\sigma_{i,t+1}=\sqrt{5}\,\mathrm{std}(\text{daily log returns in week }t{+}1)$, clipped to $[0.01,0.10]$. The model outputs $(\hat r,\hat\sigma)$ and the decision layer ranks stocks by $s_{i,t}=\hat r_{i,t}/\hat\sigma_{i,t}$: the top decile is BUY, the bottom decile SELL and the rest HOLD.
+
+\subsection{Features}
+\textbf{Own-history sequence ($F_s=31$).} For each of the 60 weeks: candle geometry relative to the previous close ($\log O/C_{-1}$, $\log H/C_{-1}$, $\log L/C_{-1}$, $\log C/C_{-1}$), log volume ratio to its 12-week mean, realized volatility; 15 technical indicators (RSI-14, MACD line/signal/histogram scaled by price, Bollinger \%B and width, ATR/price, normalized OBV, CCI-20, stochastic \%K/\%D, Williams \%R, ADX, $\pm$DI); and 10 statistical features (1/4/12/26-week returns, 4- and 12-week volatility, 12-week skewness, kurtosis, lag-1 autocorrelation, volume ratio).
+
+\textbf{Graph features ($30$).} Every week we estimate the $N\times N$ correlation matrix $C_t$ of daily log returns over the trailing 63 trading days. (1)~\emph{PCA embedding} (5): each stock's loadings on the five leading eigenvectors of $C_t$, sign-aligned across weeks. (2)~\emph{Peer momentum} (5): sector-mean 1/4/12-week returns excluding the stock itself, relative strength vs.\ sector, and 10-week sector momentum. (3)~\emph{Correlation trends} (10): correlation with equal-weight Banks, IT and Energy indices and with the Nifty~50; change of market correlation between 63- and 126-day windows; 12-week volatility of the 21-day market correlation; average intra- and extra-sector correlation; market and sector betas. (4)~\emph{Network centrality} (5): eigenvector centrality of the non-negative correlation graph, degree centrality at $|\rho|>0.3$, 13-week change in eigenvector centrality, local clustering coefficient, sector-average centrality. (5)~\emph{Market regime} (5): 20-day market volatility, 12-week market return, deviation from the 26-week moving average, average pairwise correlation and cross-sectional return dispersion. Together with an 11-way sector one-hot this gives $F_z=41$.
+
+All features at $t$ use only data up to the close of week $t$; a unit test perturbs every price after $t$ and asserts that features and targets at $\le t$ are bit-identical.
+
+\subsection{Model}
+\begin{figure}[t]\centering
+\begin{tabular}{c}
+\footnotesize
+$\begin{array}{c}
+X_{i,t}\ [60\times31] \xrightarrow{\text{Linear}+\text{pos}} [60\times d] \xrightarrow{2\times\text{(MHA}+\text{FFN)}} [60\times d] \xrightarrow{\text{attn-pool}} h_s\in\mathbb{R}^d\\[3pt]
+z_{i,t}\ [41] \xrightarrow{\text{Linear}+\text{GELU}} h_z\in\mathbb{R}^d\\[3pt]
+[h_s;h_z] \xrightarrow{\text{FC}(128)+\text{ReLU}+\text{Drop}} \; \begin{cases}\text{FC}(64)\to\hat r\\ \text{FC}(64)\to\hat\sigma\end{cases}
+\end{array}$
+\end{tabular}
+\caption{Architecture. $d=\bestdmodel$, 8 heads, pre-LayerNorm blocks, dropout \bestdropout{} on residual and FFN paths, learned-query attention pooling whose weights are used for interpretation.}
+\label{fig:arch}
+\end{figure}
+Figure~\ref{fig:arch} summarizes the network. The sequence is projected to $d$ dimensions, added to a learned positional embedding, and passed through two pre-LayerNorm self-attention blocks (8 heads) with GELU feed-forward sub-layers. A learned query attends over the 60 positions to produce a pooled vector, whose attention weights answer ``which past weeks matter''. The static vector is projected separately; the concatenation feeds a shared FC(128) backbone and two FC(64)$\to$1 task heads. Both heads predict in standardized target space; volatility is de-standardized and clipped to $[0.01,0.10]$ before use.
+
+\subsection{Training objective}
+With standardized targets $\tilde r,\tilde\sigma$ the loss for one weekly cross-section $B_t$ is
+\begin{equation}
+\mathcal{L}=w\,\mathrm{MSE}(\hat{\tilde r},\tilde r)+(1-w)\,\mathrm{MSE}(\hat{\tilde\sigma},\tilde\sigma)+\lambda\,\mathcal{L}_{\text{cost}},
+\end{equation}
+\begin{equation}
+\mathcal{L}_{\text{cost}}=-\frac{1}{\sigma_r}\Big[\textstyle\sum_i \omega_{i,t}\,r_{i,t+1}-c\sum_i|\omega_{i,t}-\omega_{i,t-1}|\Big],
+\end{equation}
+where $\omega_{\cdot,t}=\mathrm{softmax}(s_{\cdot,t}/\tau)$ are soft long-only weights implied by the scores of the same stocks in weeks $t$ and $t{-}1$ (a second forward pass), $c=0.1\%$ is the one-way cost and $\tau=0.1$. $\mathcal{L}_{\text{cost}}$ is the negative net portfolio return, so gradients push the model towards scores whose implied portfolio earns more \emph{after} the cost of changing it. Batches are whole weekly cross-sections ($\approx$45--50 stocks) so that both $\mathcal{L}_{\text{cost}}$ and portfolio-level validation metrics are computable. We use Adam (lr \bestlr, weight decay \bestweightdecay), gradient clipping at 1.0, at most 200 epochs and early stopping with patience 20.
+
+\subsection{Model selection and the validation-Sharpe pitfall}
+The PRD for this system prescribed early stopping on the validation-period Sharpe ratio. The validation period (2023-H1) has 26 weeks and the portfolio holds 5 names, so that criterion has a standard error of roughly $\sqrt{52/26}\approx1.4$ Sharpe units: in our runs it swung between $-1.3$ and $+2.4$ from one epoch to the next while the loss changed smoothly (Fig.~\ref{fig:curves}). We therefore select on the mean weekly rank information coefficient (IC) between score and realized return, which uses all $\approx$48 stocks each week, and report the Sharpe-selected model as an ablation. Hyper-parameters ($d$, depth, dropout, learning rate, weight decay, task weight $w$, $\lambda$ and the return-target mode) were tuned with 28 Optuna TPE trials on validation IC. The selected configuration is $d=\bestdmodel$, \bestnlayers{} layers, dropout \bestdropout, $w=\bestwreturn$, $\lambda=\bestlambdaturnover$, target mode \emph{\besttargetmode}.
+
+\subsection{Portfolio construction and backtest}
+At each Friday close the top 10\% of scored stocks are bought equal-weight (5 names, 20\% each; the PRD's 5\% cap is reported as a sensitivity), the bottom 10\% are sold if held, and positions are rebalanced weekly. Costs of 0.1\% per side are charged on $\sum_i|\omega^{\text{target}}_i-\omega^{\text{drifted}}_i|$, where drifted weights reflect the week's price moves; uninvested capital earns the weekly risk-free rate (6.5\% p.a.). We also report a lower-turnover \emph{hold-zone} variant (a held stock is kept while it stays in the top half of the ranking) and a dollar-neutral long--short variant.
+
+\textbf{Walk-forward.} Prediction week blocks of 13 weeks start in July~2023. For block $k$ the validation set is the 26 weeks immediately preceding it and the training set is everything from January~2019 up to the validation start (expanding window); predictions from 3 seeds are averaged. All figures below are out-of-sample in this sense. We split the reporting into the PRD test period (2023-H2 to 2024) and an untouched holdout (2025-01 to 2026-09) that was never used for any design decision.
+
+% =====================================================================
+\section{Experiments}
+\subsection{Data}
+Daily OHLCV for the current 50 Nifty~50 constituents and the index from January~2017 to September~2026 were obtained from Yahoo Finance (split/dividend adjusted; the October~2025 Tata Motors demerger is back-adjusted manually). Bars are resampled to weekly Friday closes. Stocks are eligible in a week if the price exceeds INR~10, trailing-year average volume exceeds 100K shares/day, fewer than 10\% of sessions are missing and a full 60-week feature window exists; recently listed names (Eternal, Jio Financial, Max Healthcare) enter once they qualify. Using current constituents introduces survivorship bias, which we discuss in Sec.~\ref{sec:limits}. The panel has 495 weeks $\times$ 50 stocks with 19{,}005 usable samples.
+
+\subsection{Baselines}
+(i)~\emph{Nifty~50 buy-and-hold}; (ii)~\emph{Momentum}: score = trailing 4-week return; (iii)~\emph{Inverse volatility}: score $=-$trailing 4-week volatility; (iv)~\emph{Random}: 20 random 5-stock portfolios per week, averaged; (v)~\emph{Logistic regression}: $P(r_{t+1}>\text{median})$ on the same last-week and graph features, retrained on the same walk-forward schedule. Baselines (ii)--(v) are run through the identical backtest engine with the same costs.
+
+\subsection{Main results}
+\begin{table}[t]\centering\caption{Out-of-sample performance, July~2023--September~2026 (\MtlAllWeeks{} weeks), net of 0.1\%/side costs. Sharpe and IR are annualized; brackets are 95\% stationary block-bootstrap CIs; IC is the mean weekly Spearman correlation between score and realized return; Turn.\ is average weekly one-way turnover.}\label{tab:main}
+\scriptsize\input{tab_main}\end{table}
+
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/equity_curves.pdf}
+\caption{Out-of-sample growth of one unit (log scale). The shaded region is the untouched 2025--2026 holdout.}\label{fig:equity}\end{figure}
+
+Table~\ref{tab:main} and Fig.~\ref{fig:equity} report the full out-of-sample period. \RESULTSMAIN
+
+\begin{table}[t]\centering\caption{Performance by period.}\label{tab:periods}\scriptsize\input{tab_periods}\end{table}
+\begin{table}[t]\centering\caption{Calendar-year breakdown.}\label{tab:yearly}\scriptsize\input{tab_yearly}\end{table}
+
+\RESULTSPERIODS
+
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/sharpe_ci.pdf}
+\caption{Annualized Sharpe with 95\% block-bootstrap confidence intervals (all out-of-sample weeks).}\label{fig:ci}\end{figure}
+\begin{figure}[t]\centering\includegraphics[width=0.85\columnwidth]{figures/decile_returns.pdf}
+\caption{Mean realized next-week return by decile of the MTL score (D10 = highest score).}\label{fig:decile}\end{figure}
+
+\subsection{Ablations}
+\RESULTSABLATION
+
+\subsection{Sensitivity}
+\begin{table}[t]\centering\caption{Sensitivity of the MTL strategy (all out-of-sample weeks).}\label{tab:sens}\scriptsize\input{tab_sens}\end{table}
+\begin{figure}[t]\centering\includegraphics[width=0.8\columnwidth]{figures/cost_sensitivity.pdf}\caption{Annualized Sharpe versus one-way transaction cost.}\label{fig:cost}\end{figure}
+\RESULTSSENS
+
+% =====================================================================
+\section{Interpretability Analysis}
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/attention_by_lag.pdf}
+\caption{Attention over the 60-week history on test-period samples. Left: learned-query pooling weights, overall and split by market-volatility regime; dotted line is uniform. Right: self-attention received by each position in the last layer.}\label{fig:att}\end{figure}
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/shap_importance.pdf}
+\caption{SHAP (expected-gradients) attribution of the decision score. Left: top-15 features; violet bars are graph features. Right: attribution mass by feature group.}\label{fig:shap}\end{figure}
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/training_curves.pdf}
+\caption{Training curves of the static model. The validation Sharpe (right) is far noisier than the loss or the IC; the dotted line marks the IC-selected epoch.}\label{fig:curves}\end{figure}
+
+\textbf{Attention.} \RESULTSATT
+
+\textbf{Feature importance.} \RESULTSSHAP
+
+\textbf{Decision rules.} For any recommendation the system reports predicted return, predicted volatility, score percentile and the three largest SHAP contributions; e.g.\ the \texttt{recommend} command prints ``BUY, $\hat r=+1.2\%$, $\hat\sigma=2.6\%$, score 0.46 (96th pct); factors: \ldots''. The example table produced for the first test week is in the repository (\texttt{results/tables/example\_explanations.csv}).
+
+\subsection{Failure analysis}
+\begin{table}[t]\centering\caption{Out-of-sample signal quality by market regime (buckets split at the median of each regime variable).}\label{tab:regimes}\scriptsize\input{tab_regimes}\end{table}
+\begin{figure}[t]\centering\includegraphics[width=\columnwidth]{figures/failure_regimes.pdf}\caption{Rank-IC and portfolio Sharpe by regime.}\label{fig:regimes}\end{figure}
+\RESULTSFAIL
+
+% =====================================================================
+\section{Discussion and Limitations}\label{sec:limits}
+\RESULTSDISC
+
+\textbf{Limitations.} (1)~\emph{Survivorship bias}: the universe is today's Nifty~50, so stocks that were removed after poor performance are absent from training and testing; this flatters all strategies including the benchmarks built on the same universe, but not the Nifty index itself. (2)~\emph{Small universe}: with 50 names the top decile is 5 stocks, so portfolio statistics are noisy and the confidence intervals in Fig.~\ref{fig:ci} are wide. (3)~\emph{Costs}: 0.1\% per side is realistic for a retail discount broker on large caps but ignores market impact, which would matter at scale. (4)~\emph{Regime coverage}: the training window starts in 2019 and contains one crash (2020); the 2008 stress test envisaged in the PRD is impossible for many constituents that were not listed. (5)~\emph{Sector labels} are hand-curated. (6)~The test period is under four years; a Sharpe ratio measured over such a span can be positive by chance, as the intervals make explicit.
+
+% =====================================================================
+\section{Conclusion}
+We built and evaluated an end-to-end recommendation engine for Nifty~50 stocks that ranks on predicted return per unit of predicted volatility, uses attention over a 60-week history together with explicit correlation-graph features, and trains with transaction costs in the objective. \RESULTSCONC{} Beyond the numbers, the work makes two practical points for applied researchers: the volatility task is where most of the learnable signal lives and it stabilizes the return task; and short-window Sharpe ratios should not be used to select models. Code and data scripts are available at the project repository.
+
+\bibliographystyle{IEEEtran}
+\begin{thebibliography}{99}\footnotesize
+\bibitem{fama1993} E.~F. Fama and K.~R. French, ``Common risk factors in the returns on stocks and bonds,'' \emph{J. Financial Economics}, vol.~33, no.~1, pp. 3--56, 1993.
+\bibitem{jegadeesh1993} N. Jegadeesh and S. Titman, ``Returns to buying winners and selling losers: Implications for stock market efficiency,'' \emph{J. Finance}, vol.~48, no.~1, pp. 65--91, 1993.
+\bibitem{fischer2018} T. Fischer and C. Krauss, ``Deep learning with long short-term memory networks for financial market predictions,'' \emph{European J. Operational Research}, vol.~270, no.~2, pp. 654--669, 2018.
+\bibitem{sezer2020} O.~B. Sezer, M.~U. Gudelek, and A.~M. Ozbayoglu, ``Financial time series forecasting with deep learning: A systematic literature review 2005--2019,'' \emph{Applied Soft Computing}, vol.~90, 2020.
+\bibitem{gu2020} S. Gu, B. Kelly, and D. Xiu, ``Empirical asset pricing via machine learning,'' \emph{Review of Financial Studies}, vol.~33, no.~5, pp. 2223--2273, 2020.
+\bibitem{caruana1997} R. Caruana, ``Multitask learning,'' \emph{Machine Learning}, vol.~28, pp. 41--75, 1997.
+\bibitem{ruder2017} S. Ruder, ``An overview of multi-task learning in deep neural networks,'' \emph{arXiv:1706.05098}, 2017.
+\bibitem{ma2021mtl} T. Ma and Y. Tan, ``Multiple stock time series jointly forecasting with multi-task learning,'' in \emph{Proc. IJCNN}, 2020.
+\bibitem{engle1982} R.~F. Engle, ``Autoregressive conditional heteroscedasticity with estimates of the variance of United Kingdom inflation,'' \emph{Econometrica}, vol.~50, no.~4, pp. 987--1007, 1982.
+\bibitem{bollerslev1986} T. Bollerslev, ``Generalized autoregressive conditional heteroskedasticity,'' \emph{J. Econometrics}, vol.~31, no.~3, pp. 307--327, 1986.
+\bibitem{andersen2003} T.~G. Andersen, T. Bollerslev, F.~X. Diebold, and P. Labys, ``Modeling and forecasting realized volatility,'' \emph{Econometrica}, vol.~71, no.~2, pp. 579--625, 2003.
+\bibitem{mantegna1999} R.~N. Mantegna, ``Hierarchical structure in financial markets,'' \emph{European Physical J. B}, vol.~11, pp. 193--197, 1999.
+\bibitem{onnela2003} J.-P. Onnela, A. Chakraborti, K. Kaski, J. Kert\'esz, and A. Kanto, ``Dynamics of market correlations: Taxonomy and portfolio analysis,'' \emph{Physical Review E}, vol.~68, 2003.
+\bibitem{feng2019} F. Feng, X. He, X. Wang, C. Luo, Y. Liu, and T.-S. Chua, ``Temporal relational ranking for stock prediction,'' \emph{ACM Trans. Information Systems}, vol.~37, no.~2, 2019.
+\bibitem{chen2018} Y. Chen, Z. Wei, and X. Huang, ``Incorporating corporation relationship via graph convolutional neural networks for stock price prediction,'' in \emph{Proc. CIKM}, 2018.
+\bibitem{vaswani2017} A. Vaswani \emph{et al.}, ``Attention is all you need,'' in \emph{Proc. NeurIPS}, 2017.
+\bibitem{lundberg2017} S.~M. Lundberg and S.-I. Lee, ``A unified approach to interpreting model predictions,'' in \emph{Proc. NeurIPS}, 2017.
+\bibitem{bailey2014} D.~H. Bailey, J. Borwein, M. L\'opez de Prado, and Q.~J. Zhu, ``Pseudo-mathematics and financial charlatanism: The effects of backtest overfitting on out-of-sample performance,'' \emph{Notices of the AMS}, vol.~61, no.~5, pp. 458--471, 2014.
+\bibitem{politis1994} D.~N. Politis and J.~P. Romano, ``The stationary bootstrap,'' \emph{J. American Statistical Association}, vol.~89, no.~428, pp. 1303--1313, 1994.
+\end{thebibliography}
+\end{document}

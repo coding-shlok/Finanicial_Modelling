@@ -1,0 +1,2 @@
+12:02:50 walk-forward from 2023-07-01 with params {'dropout': 0.30000000000000004, 'lr': 0.0028781002826092387, 'weight_decay': 0.0005717421310401361, 'w_return': 0.6000000000000001, 'lambda_turnover': 0.0, 'target_mode': 'raw'}
+12:02:50 [mtl] fold 0: train 2019-01-04..2022-12-30 | val 2023-01-06..2023-06-30 | predict 2023-07-07..2023-09-29

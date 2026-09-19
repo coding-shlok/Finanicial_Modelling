@@ -1,0 +1,60 @@
+{
+  "splits": {
+    "data_start": "2017-01-01",
+    "train_start": "2019-01-01",
+    "train_end": "2022-12-31",
+    "val_start": "2023-01-01",
+    "val_end": "2023-06-30",
+    "test_start": "2023-07-01",
+    "test_end": "2024-12-31",
+    "holdout_start": "2025-01-01"
+  },
+  "data": {
+    "lookback_weeks": 60,
+    "min_price_inr": 10.0,
+    "min_avg_daily_volume": 100000,
+    "max_missing_frac": 0.1,
+    "vol_clip": [
+      0.01,
+      0.1
+    ],
+    "rolling_vol_window": 4
+  },
+  "model": {
+    "d_model": 64,
+    "n_heads": 8,
+    "n_layers": 2,
+    "d_hidden": 128,
+    "d_head": 64,
+    "dropout": 0.30000000000000004,
+    "vol_clip": [
+      0.01,
+      0.1
+    ]
+  },
+  "train": {
+    "lr": 0.0028781002826092387,
+    "weight_decay": 0.0005717421310401361,
+    "batch_size": 32,
+    "epochs": 80,
+    "patience": 15,
+    "grad_clip": 1.0,
+    "w_return": 0.6000000000000001,
+    "w_vol": 0.3999999999999999,
+    "lambda_turnover": 0.0,
+    "cost_per_side": 0.001,
+    "tau": 0.1,
+    "target_mode": "raw",
+    "early_stop_metric": "ic",
+    "seed": 42,
+    "device": "auto"
+  },
+  "backtest": {
+    "top_frac": 0.1,
+    "bottom_frac": 0.1,
+    "cost_per_side": 0.001,
+    "max_position": 0.2,
+    "initial_capital": 1000000.0,
+    "retrain_every_weeks": 13
+  }
+}

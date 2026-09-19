@@ -1,0 +1,2 @@
+12:03:08 [final] ep   1  train 0.9542  val 0.6416  valSharpe -0.505  IC -0.0317  * (11s)
+12:03:19 [final] ep   2  train 0.9264  val 0.5953  valSharpe -0.224  IC +0.0138  * (22s)

@@ -118,7 +118,9 @@ def _epoch_loss(model, loader, scalers, tcfg: TrainConfig, device, opt=None) -> 
             r, v = model(seq, st)
             prev = None
             if tcfg.lambda_turnover > 0 and "prev_seq" in b:
-                prev = model(b["prev_seq"].to(device), b["prev_static"].to(device))
+                # previous-week implied weights are treated as a constant (no second backward pass)
+                with torch.no_grad():
+                    prev = model(b["prev_seq"].to(device), b["prev_static"].to(device))
             loss, _ = mtl_loss(r, v, yr, yv, scalers, tcfg.w_return, tcfg.w_vol,
                                lam=tcfg.lambda_turnover, cost=tcfg.cost_per_side, tau=tcfg.tau, prev=prev)
             if train:

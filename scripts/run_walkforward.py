@@ -9,6 +9,7 @@ mtl            full model (best Optuna params)
 mtl_nograph    graph features zeroed          (ablation: graph)
 mtl_ret_only   single-task return head        (ablation: MTL)
 mtl_nocost     lambda_turnover = 0            (ablation: cost-aware loss; only if best lambda > 0)
+mtl_cost       lambda_turnover = 0.3          (ablation in the other direction; only if best lambda == 0)
 """
 from __future__ import annotations
 
@@ -32,7 +33,8 @@ PREDS.mkdir(exist_ok=True)
 
 
 def apply_best(cfg: Config, params: dict) -> Config:
-    cfg.model.d_model = params["d_model"]; cfg.model.n_layers = params["n_layers"]; cfg.model.dropout = params["dropout"]
+    cfg.model.d_model = params.get("d_model", cfg.model.d_model); cfg.model.n_layers = params.get("n_layers", cfg.model.n_layers)
+    cfg.model.dropout = params["dropout"]
     cfg.train.lr = params["lr"]; cfg.train.weight_decay = params["weight_decay"]
     cfg.train.w_return = params["w_return"]; cfg.train.w_vol = 1 - params["w_return"]
     cfg.train.lambda_turnover = params["lambda_turnover"]; cfg.train.target_mode = params["target_mode"]
@@ -41,7 +43,8 @@ def apply_best(cfg: Config, params: dict) -> Config:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--variants", nargs="+", default=["mtl", "mtl_nograph", "mtl_ret_only", "mtl_nocost", "logistic"])
+    ap.add_argument("--variants", nargs="+", default=["mtl", "mtl_nograph", "mtl_ret_only", "mtl_nocost", "mtl_cost", "logistic"])
+    ap.add_argument("--ablation-seeds", type=int, default=1, help="seeds for ablation variants (main uses --seeds)")
     ap.add_argument("--seeds", type=int, default=3)
     ap.add_argument("--epochs", type=int, default=80)
     ap.add_argument("--patience", type=int, default=15)
@@ -65,7 +68,10 @@ def main():
         if v == "mtl_nocost" and cfg.train.lambda_turnover == 0:
             log.info("skip mtl_nocost: best lambda is already 0")
             continue
-        c = Config.from_yaml(RESULTS / "final_config.json") if False else apply_best(Config(), best)
+        if v == "mtl_cost" and cfg.train.lambda_turnover > 0:
+            log.info("skip mtl_cost: best lambda is already > 0")
+            continue
+        c = apply_best(Config(), best)
         c.train.epochs, c.train.patience = args.epochs, args.patience
         kw = {}
         if v == "mtl_nograph":
@@ -74,7 +80,10 @@ def main():
             kw["tasks"] = ("ret",)
         if v == "mtl_nocost":
             c.train.lambda_turnover = 0.0
-        preds, info = walk_forward_mtl(fs, c, u.rf_weekly, start, args.end, n_seeds=args.seeds, tag=v, **kw)
+        if v == "mtl_cost":
+            c.train.lambda_turnover = 0.3
+        n_seeds = args.seeds if v == "mtl" else args.ablation_seeds
+        preds, info = walk_forward_mtl(fs, c, u.rf_weekly, start, args.end, n_seeds=n_seeds, tag=v, **kw)
         preds.save(PREDS / f"{v}.h5")
         infos[v] = info
         pd.DataFrame(info).to_csv(PREDS / f"{v}_folds.csv", index=False)

@@ -30,7 +30,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--trials", type=int, default=30)
     ap.add_argument("--epochs", type=int, default=60)
-    ap.add_argument("--study", default="mtl_v1")
+    ap.add_argument("--study", default="mtl_v2")
+    ap.add_argument("--seed", type=int, default=0, help="sampler seed (use a different one per worker)")
     args = ap.parse_args()
 
     fs = FeatureSet.load()
@@ -40,8 +41,6 @@ def main():
 
     def objective(trial: optuna.Trial) -> float:
         cfg = Config()
-        cfg.model.d_model = trial.suggest_categorical("d_model", [32, 64, 96])
-        cfg.model.n_layers = trial.suggest_int("n_layers", 1, 3)
         cfg.model.dropout = trial.suggest_float("dropout", 0.1, 0.5, step=0.1)
         cfg.train.lr = trial.suggest_float("lr", 1e-4, 3e-3, log=True)
         cfg.train.weight_decay = trial.suggest_float("weight_decay", 1e-6, 1e-3, log=True)
@@ -50,7 +49,7 @@ def main():
         cfg.train.lambda_turnover = trial.suggest_categorical("lambda_turnover", [0.0, 0.1, 0.3, 1.0])
         cfg.train.target_mode = trial.suggest_categorical("target_mode", ["raw", "cs_demean"])
         cfg.train.epochs = args.epochs
-        cfg.train.patience = 15
+        cfg.train.patience = 10
         model, sc, hist = train_model(fs, cfg, masks["train"], masks["val"], u.rf_weekly, verbose=False,
                                       tag=f"trial{trial.number}")
         h = hist.to_frame()
@@ -63,7 +62,7 @@ def main():
 
     storage = f"sqlite:///{RESULTS / 'optuna.db'}"
     study = optuna.create_study(study_name=args.study, storage=storage, direction="maximize",
-                                load_if_exists=True, sampler=optuna.samplers.TPESampler(seed=0))
+                                load_if_exists=True, sampler=optuna.samplers.TPESampler(seed=args.seed, n_startup_trials=8))
     study.optimize(objective, n_trials=args.trials)
     best = study.best_trial
     out = {"params": best.params, "val_ic": best.value, **best.user_attrs}
