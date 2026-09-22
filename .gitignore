@@ -17,3 +17,6 @@ results/preds/*.h5
 # without installing tectonic). Only LaTeX build byproducts above are ignored.
 results/logs/
 results/recommendations_*.csv
+*.egg-info/
+build/
+dist/
